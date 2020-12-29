@@ -1,13 +1,15 @@
-from datetime import datetime
 from pprint import pformat
 import re
 
-from src.bet import Bet
-from src.match_title import MatchTitle
+from abstract_scraper import AbstractScraper
+from bet import Bet
+from bet_group import BetGroup
+from date_time import DateTime
+from match_title import MatchTitle
 
 
 class Match:
-    def __init__(self, title: MatchTitle, url: str, date_time: datetime, scraper, bets=None):
+    def __init__(self, title: MatchTitle, url: str, date_time: DateTime, scraper: AbstractScraper, bets=None):
         if bets is None:
             bets = []
         self.title = title
@@ -25,7 +27,7 @@ class Match:
         found = re.search(r'^(https://.+?) (.+?): (.+?)$', key)
         if found:
             url = found.group(1)
-            date_time = datetime.fromisoformat(found.group(2))
+            date_time = DateTime.fromisoformat(found.group(2))
             title = MatchTitle.from_str(found.group(3))
 
         bets_dict = list(match_dict.values())[0][0]
@@ -36,9 +38,16 @@ class Match:
     def to_dict(self):
         result = {}
         for bet in self.bets:
-            value = str(bet.odds) + '(' + str(bet.bookmaker) + ' - ' + str(bet.url) + ')'
+            value = None
+            key = None
+            if type(bet) == Bet:
+                key = bet.title
+                value = f'{bet.odds}: {bet.amount}({bet.bookmaker} - {bet.url})'
+            elif type(bet) == BetGroup:
+                key = f'Profit {bet.profit} - {bet.title}'
+                value = bet.to_dict()
 
-            result.setdefault(bet.title, []).append(value)
+            result.setdefault(key, []).append(value)
 
         return result
 
@@ -69,14 +78,3 @@ class Match:
         if self.url:
             url_str = self.url + ' '
         return pformat({url_str + date_time_str + str(self.title): self.to_dict()}, width=300)
-
-
-if __name__ == '__main__':
-    b1 = Bet('Total Over 2.5', '2.77', 'sample_bookmaker', 'https://sample_bet1_url.domain')
-    b2 = Bet('Total Under 2.5', '1.45', 'sample_bookmaker', 'https://sample_bet2_url.domain')
-    mt = MatchTitle.from_str('astralis - g2 - cloud9')
-    dt = datetime(2020, 12, 23, 14, 0, 0)
-    m = Match(mt, 'https://sample_match_url.domain', dt, None, [b1, b2])
-    print(m)
-    print(m.to_dict())
-    print(m.__dict__)
