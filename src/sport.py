@@ -1,9 +1,10 @@
-from datetime import datetime
+import xlsxwriter
+import pickle
 from pprint import pformat
 
-from src.bet import Bet
-from src.match import Match
-from src.match_title import MatchTitle
+from bet_group import BetGroup
+from constants import SPORT_NAME
+from match import Match
 
 
 class Sport:
@@ -49,17 +50,48 @@ class Sport:
     def __getitem__(self, item: int):
         return self.matches[item]
 
+    def serialize(self, filename):
+        return pickle.dump(self, open(filename, 'wb'))
+
+    @classmethod
+    def deserialize(cls, filename):
+        return pickle.load(open(filename, 'rb'))
+
+    def write_xlsx(self, filename):
+        workbook = xlsxwriter.Workbook(filename)
+        worksheet = workbook.add_worksheet()
+        row = 0
+        column = 0
+
+        column_names = ['Match', 'Time', 'Profit', 'Bet', 'Odds', 'Bet amount', 'Bookmaker', 'URL']
+        for column_name in column_names:
+            worksheet.write(row, column, column_name)
+            column += 1
+        row += 1
+
+        for match in self:
+            match_title = match.title
+            match_date_time = match.date_time
+            for bet_group in match:
+                profit = bet_group.profit
+                if isinstance(bet_group, BetGroup):
+                    for bet in bet_group:
+                        values = [str(match_title), str(match_date_time), str(profit), bet.title, bet.odds,
+                                  str(bet.amount), bet.bookmaker, bet.url]
+                        column = 0
+                        for value in values:
+                            worksheet.write(row, column, value)
+                            column += 1
+
+                        row += 1
+                        match_title = ''
+                        match_date_time = ''
+                        profit = ''
+
+        workbook.close()
+
 
 if __name__ == '__main__':
-    b11 = Bet('Total Over 2.5', '2.87', 'sample_bookmaker', 'https://sample_bet11_url.domain')
-    b12 = Bet('Total Under 2.5', '1.41', 'sample_bookmaker', 'https://sample_bet12_url.domain')
-    mt1 = MatchTitle.from_str('astralis - g2')
-    dt1 = datetime(2020, 12, 23, 14, 0, 0)
-    m1 = Match(mt1, 'https://sample_match1_url.domain', dt1, None, [b11, b12])
-    b21 = Bet('Total Over 2.5', '2.77', 'sample_bookmaker', 'https://sample_bet21_url.domain')
-    b22 = Bet('Total Under 2.5', '1.46', 'sample_bookmaker', 'https://sample_bet22_url.domain')
-    mt2 = MatchTitle.from_str('virtus.pro - cloud9')
-    dt2 = datetime(2020, 11, 12, 22, 30, 0)
-    m2 = Match(mt2, 'https://sample_match2_url.domain', dt2, None, [b21, b22])
-    sport = Sport('csgo', [m1, m2])
+    sport = Sport.deserialize(f'arbitrager\\sample_data\\{SPORT_NAME}')
     print(sport)
+    sport.write_xlsx(f'{SPORT_NAME}.xlsx')
