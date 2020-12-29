@@ -1,6 +1,5 @@
 from syntax_formatters.esports.esports_abstract_syntax_formatter import EsportsAbstractSyntaxFormatter
 from syntax_formatters.parimatch_syntax_formatter import ParimatchSyntaxFormatter as PSF
-from match_title_compiler import MatchTitleCompiler
 
 
 class EsportsParimatchSyntaxFormatter(EsportsAbstractSyntaxFormatter, PSF):
